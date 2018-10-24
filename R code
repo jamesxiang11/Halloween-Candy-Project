@@ -1,0 +1,175 @@
+library(ggplot2)
+library(corrplot)
+library(relaimpo)
+library(magrittr)
+library(gridExtra)
+library(ggrepel)
+library(ggthemes)
+
+#load data
+candy = read.csv("candy-data.csv")
+
+#EDA
+candy$win = as.integer(candy$winpercent)
+candy$total=100
+cmod = glm(win/total~chocolate+caramel+fruity+peanutyalmondy+nougat+crispedricewafer+hard+bar+pluribus+sugarpercent,data=candy,weights=total,family=binomial)
+summary(cmod)
+anova(cmod,test="Chi")
+
+theme_set(theme_bw())
+ggplot(data = candy, aes(x = chocolate, 
+                                 y = winpercent, 
+                                 label = competitorname
+)) +
+  geom_smooth(method = "lm") + 
+  geom_text(check_overlap = T,
+            angle = 20,
+            size = 2.5 
+  ) + 
+  labs(title = "More sugary candies are more popular", 
+       x = "Sugar content (percentile)",
+       y = "Win (percentile)" 
+  )
+
+candydatacor<-cor(candy[2:14])
+corrplot(candydatacor)
+
+candyFeatures <- candy[2:10]
+candyFeatures[] <- lapply(candyFeatures, as.logical)
+ggplot(candyFeatures, aes(x = chocolate,fill=caramel)) + 
+  geom_bar(position="dodge")
+
+candy %>% ggplot(aes(x=winpercent,y=sum)) + geom_point() + 
+  geom_label_repel(
+    aes(label=ifelse(sum>3,competitorname,"")),
+    fontface = 'bold', size=3,
+    color = '#0b421a',
+    segment.color = 'grey50',force=20,
+    alpha=.7) +
+  ggtitle('Number of features vs. winning percentage')
+
+ggplot(data = candy, aes(x = fruity, 
+                         y = winpercent, 
+                         label = competitorname
+)) +
+  geom_smooth(method = "lm") + 
+  labs(title = "Candies contains chocolate are more popular", 
+       x = "f",
+       y = "Win (percentile)" 
+  )
+plot.eda <- function (x, y, label) {
+  
+  ggplot(data = candy, aes(x = x, 
+                           y = y
+                           
+  )) +
+    geom_smooth(method = "lm") + 
+    labs(title = label, 
+         x = "chocolate",
+         y = "Win (percentile)" 
+    )
+}
+plot.eda(chocolate,winpercent,"Candies contains chocolate are more popular")
+
+for(i in 1:85)
+{
+if(candy$winpercent[i]>59.86){candy$tmp[i]=1}
+else{candy$tmp[i]=0}
+}
+
+#Model building
+cmod1 = glm(tmp~chocolate+sugarpercent,data=candy,family = binomial)
+summary(cmod1)
+anova(cmod1,test="Chisq")
+
+
+cmod2 = glm(win/total~chocolate*bar+fruity+peanutyalmondy+crispedricewafer+hard+sugarpercent,data=candy,weights=total,family = binomial)
+summary(cmod2)
+anova(cmod2,test="Chisq")
+
+cmod3 = glm(tmp~chocolate+nougat+peanutyalmondy*bar+sugarpercent,data=candy,family=binomial)
+summary(cmod3)
+anova(cmod3,test="Chisq")
+
+cmod4 = glm(tmp~chocolate+hard+peanutyalmondy*bar+sugarpercent,data=candy,family=binomial)
+summary(cmod4)
+anova(cmod4,test="Chisq")
+
+cmod5 = glm(win/total~chocolate+hard+peanutyalmondy*bar+sugarpercent,data=candy,weights=total,family=binomial)
+summary(cmod5)
+anova(cmod5,test="Chisq")
+
+cmod6 = glm(win~chocolate*sugarpercent+hard+peanutyalmondy*bar,data=candy,family=poisson)
+summary(cmod6)
+anova(cmod6,test="Chisq")
+
+ggplot(data = candy, aes(x = sugarpercent, 
+                         y = winpercent, 
+                         label = chocolate
+)) +
+  geom_smooth(method = "lm") + 
+  geom_text(check_overlap = T,
+            angle = 20,
+            size = 2.5 
+  ) + 
+  labs(title = "More sugary candies are more popular", 
+       x = "Sugar content (percentile)",
+       y = "Win (percentile)" 
+  )
+
+ggplot(data = candy, aes(x = factor(chocolate), 
+                         y = winpercent, 
+                         label = caramel
+)) +
+  geom_smooth(method = "lm") + 
+  geom_text(check_overlap = T,
+            angle = 20,
+            size = 2.5 
+  ) + 
+  labs(title = "More sugary candies are more popular", 
+       x = "Choclate",
+       y = "Win (percentile)" 
+  )
+
+ggplot(data = candy, aes(x = sugarpercent, 
+                         y = winpercent, 
+                         label = fruity,color= factor(fruity)
+)) +
+  geom_smooth(method = "lm",se=FALSE) + 
+  geom_text(check_overlap = T,
+            angle = 20,
+            size = 2.5 
+  ) + 
+  labs(x = "Sugar content (percentile)",
+       y = "Win (percentile)" 
+  )
+
+ggplot(data = candy, aes(x = sugarpercent, 
+                         y = winpercent, 
+                         label = bar
+)) +
+  geom_smooth(method = "lm") + 
+  geom_text(check_overlap = T,
+            angle = 20,
+            size = 2.5 
+  ) + 
+  labs(title = "More sugary candies are more popular", 
+       x = "Sugar content (percentile)",
+       y = "Win (percentile)" 
+  )
+
+cmod7 = glm(win~chocolate*peanutyalmondy+sugarpercent+chocolate*fruity+crispedricewafer,data=candy,family=poisson(link=log))
+summary(cmod7)
+anova(cmod7,test="Chisq")
+
+##After applying anova table, we can see that cmod8 is the best
+cmod8 = glm(win~chocolate*peanutyalmondy+sugarpercent*crispedricewafer+fruity+hard,data=candy,family=poisson(link=log))
+summary(cmod8)
+anova(cmod8,test="Chisq")
+qqnorm(cmod8$fitted.values)
+qqline(cmod8$fitted.values)
+fits.cmod8 = fitted(cmod8)
+resids.cmod8 = resid(cmod8)
+
+plot(fits.cmod8, resids.cmod8); 
+abline(h=0)
